@@ -1,11 +1,16 @@
 import Virtualization
 import Foundation
 
-// Configuration
-let diskPath = "ubuntu.raw"
-let seedPath = "seed.iso"
-let efiVarStorePath = "efi_vars.store"
-let machineIdPath = "machine_id.bin"
+// Configuration - 支持通过环境变量覆盖默认值
+let diskPath = ProcessInfo.processInfo.environment["VMCTL_DISK"] ?? "ubuntu.raw"
+let seedPath = ProcessInfo.processInfo.environment["VMCTL_SEED"] ?? "seed.iso"
+let efiVarStorePath = ProcessInfo.processInfo.environment["VMCTL_EFI_STORE"] ?? "efi_vars.store"
+let machineIdPath = ProcessInfo.processInfo.environment["VMCTL_MACHINE_ID"] ?? "machine_id.bin"
+
+// CPU和内存配置
+let cpuCount = Int(ProcessInfo.processInfo.environment["VMCTL_CPU"] ?? "") ?? 2
+let memorySize = UInt64(ProcessInfo.processInfo.environment["VMCTL_MEMORY"] ?? "") ?? (2 * 1024 * 1024 * 1024)
+let vmName = ProcessInfo.processInfo.environment["VMCTL_NAME"] ?? "default"
 
 func createVirtualMachine() -> VZVirtualMachine? {
     // Check if disk exists
@@ -16,8 +21,8 @@ func createVirtualMachine() -> VZVirtualMachine? {
     }
 
     let config = VZVirtualMachineConfiguration()
-    config.cpuCount = 2
-    config.memorySize = 2 * 1024 * 1024 * 1024 // 2GB
+    config.cpuCount = cpuCount
+    config.memorySize = memorySize
 
     // Boot Loader (EFI)
     let bootLoader = VZEFIBootLoader()
@@ -119,7 +124,10 @@ guard let vm = createVirtualMachine() else {
 let delegate = VMDelegate()
 vm.delegate = delegate
 
-print("Starting VM...")
+print("Starting VM '\(vmName)'...")
+print("  Disk: \(diskPath)")
+print("  CPU: \(cpuCount) cores")
+print("  Memory: \(memorySize / 1024 / 1024)MB")
 vm.start { result in
     switch result {
     case .success:
